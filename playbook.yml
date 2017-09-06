@@ -1,0 +1,35 @@
+- hosts: all
+  any_errors_fatal: true
+  gather_facts: no
+  become: true
+  become_user: root
+  remote_user: arran
+  vars:
+    env:
+       HI: test3
+  tasks:
+    - name: Ensure any old docker installs are gone
+      command: apt-get remove docker docker-engine docker.io
+      ignore_errors: no
+    - name: Update the repositories
+      command: apt-get update
+      ignore_errors: no
+    - shell: uname -r
+      register: uname
+    - name: Install extra support and install packages to allow apt to use a repository over HTTPS
+      command: apt-get install -y linux-image-extra-{{uname.stdout}} linux-image-extra-virtual apt-transport-https ca-certificates curl software-properties-common
+      ignore_errors: no
+    - name: Add Docker’s official GPG key
+      command: bash -c "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -"
+      ignore_errors: no
+    - shell: lsb_release -cs
+      register: lsb_release
+    - name: Ensure we're only getting stable versions and not edge
+      command: add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{lsb_release.stdout}} stable"
+      ignore_errors: no
+    - name: Update the repositories including docker
+      command: apt-get update
+      ignore_errors: no
+    - name: Install docker
+      command: apt-get install -y docker-ce
+      ignore_errors: no
